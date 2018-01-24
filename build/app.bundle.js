@@ -18283,10 +18283,6 @@ var _react2 = _interopRequireDefault(_react);
 
 __webpack_require__(28);
 
-var _converter = __webpack_require__(33);
-
-var _converter2 = _interopRequireDefault(_converter);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -18379,8 +18375,6 @@ var Calculator = function (_Component) {
     }, {
         key: 'clear',
         value: function clear() {
-            console.log(new _converter2.default().convert("11111+2/3333/44*55*66-777"));
-
             this.setState({
                 value: ""
             });
@@ -18403,7 +18397,7 @@ var Calculator = function (_Component) {
     }, {
         key: 'isOperation',
         value: function isOperation(letter) {
-            return letter === "+" || letter === "-" || letter === "/" || letter === "*";
+            return '+-/*'.indexOf() !== -1;
         }
     }]);
 
@@ -19005,158 +18999,6 @@ module.exports = function (css) {
 	return fixedCss;
 };
 
-
-/***/ }),
-/* 33 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Converter = function () {
-    function Converter(props) {
-        _classCallCheck(this, Converter);
-
-        this.state = {
-            behavior: {
-                BehaviorDirectly: 0,
-                BehaviorAwait: 1,
-                BehaviorContinue: 2,
-                BehaviorBraces: 3,
-                BehaviorFinish: 4,
-                BehaviorError: 5
-            }
-        };
-
-        this.convert = this.convert.bind(this);
-        this.getOperationsBehavior = this.getOperationsBehavior.bind(this);
-    }
-
-    _createClass(Converter, [{
-        key: 'convert',
-        value: function convert(input) {
-            var _this = this;
-
-            var resultStack = [];
-            var frontStack = [];
-            var awaitStack = [];
-
-            var _state$behavior = this.state.behavior,
-                BehaviorDirectly = _state$behavior.BehaviorDirectly,
-                BehaviorAwait = _state$behavior.BehaviorAwait,
-                BehaviorContinue = _state$behavior.BehaviorContinue,
-                BehaviorBraces = _state$behavior.BehaviorBraces,
-                BehaviorFinish = _state$behavior.BehaviorFinish,
-                BehaviorError = _state$behavior.BehaviorError;
-
-
-            var accum = "";
-            var sourceValues = [];
-
-            var index = 0;
-            while (index++ < input.length) {
-                if (Converter.isOperation(input[index])) {
-                    sourceValues.push({ value: accum });
-                    accum = input[index];
-                } else {
-                    if (Converter.isOperation(accum)) {
-                        sourceValues.push({ value: accum });
-                        accum = input[index];
-                    } else {
-                        accum = accum + '' + input[index];
-                    }
-                }
-            }
-
-            if (!sourceValues || sourceValues.length === 0) return "[Converter input data error]";
-
-            // Mark the both head and tail
-            sourceValues[0].side = sourceValues[sourceValues.length - 1].side = "side";
-
-            sourceValues.forEach(function (el, index, arr) {
-                var behavior = BehaviorError;
-                var item = el;
-
-                // Head and any numbers is always getting to the front stack
-                if (index === 0 || !Converter.isOperation(item)) {
-                    behavior = BehaviorDirectly;
-                } else {
-                    behavior = _this.getOperationsBehavior(item, awaitStack[awaitStack.length - 1]);
-                }
-
-                switch (behavior) {
-                    case BehaviorDirectly:
-                        frontStack.push(item);
-                        break;
-                    case BehaviorAwait:
-                        awaitStack.push(item);
-                        break;
-                    case BehaviorContinue:
-                        frontStack.push(awaitStack.pop());
-                        break;
-                    case BehaviorBraces:
-                        awaitStack.pop();
-                        break;
-                    case BehaviorFinish:
-                        resultStack.concat(frontStack);
-                        break;
-                    case BehaviorError:
-                        resultStack.push("[Algorythm Error]");
-                        break;
-                }
-            });
-
-            return resultStack.toString();
-        }
-
-        /** Таблица сответствий поведения при переводе в обратную польскую нотацию
-          behavior: {
-                    BehaviorAwait: 1,
-                    BehaviorContinue: 2,
-                    BehaviorBraces: 3,
-                    BehaviorFinish: 4,
-                    BehaviorError: 5
-                }
-         */
-
-    }, {
-        key: 'getOperationsBehavior',
-        value: function getOperationsBehavior(a, b) {
-            var pattern = {
-                "||": 4, "+|": 1, "-|": 1, "*|": 1, "/|": 1, "(|": 1, ")|": 5,
-                "|+": 2, "++": 2, "-+": 2, "*+": 1, "/+": 1, "(+": 1, ")+": 2,
-                "|-": 2, "+-": 2, "--": 2, "*-": 1, "/-": 1, "(-": 1, ")-": 2,
-                "|*": 2, "+*": 2, "-*": 2, "**": 2, "/*": 2, "(*": 1, ")*": 2,
-                "|/": 2, "+/": 2, "-/": 2, "*/": 2, "//": 2, "(/": 1, ")/": 2,
-                "|(": 5, "+(": 1, "-(": 1, "*(": 1, "/(": 1, "((": 1, "()": 3
-            };
-
-            var result = pattern[a + "" + b];
-
-            console.log(a + " : " + b + " = " + result);
-
-            return result;
-        }
-    }], [{
-        key: 'isOperation',
-        value: function isOperation(letter) {
-            var result = letter != '' && '/*+-()'.indexOf(letter) !== -1;
-            return result;
-        }
-    }]);
-
-    return Converter;
-}();
-
-exports.default = Converter;
 
 /***/ })
 /******/ ]);

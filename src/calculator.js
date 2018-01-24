@@ -1,6 +1,5 @@
 import React, {Component} from 'react';
 import './calculator.css';
-import Converter from "./converter";
 
 export default class Calculator extends Component {
     constructor(props) {
@@ -63,8 +62,6 @@ export default class Calculator extends Component {
     }
 
     clear() {
-        console.log(new Converter().convert("11111+2/3333/44*55*66-777"));
-
         this.setState({
             value: "",
         })
@@ -85,6 +82,6 @@ export default class Calculator extends Component {
     }
 
     isOperation(letter) {
-        return letter === "+" || letter === "-" || letter === "/" || letter === "*";
+        return '+-/*'.indexOf() !== -1;
     }
 }

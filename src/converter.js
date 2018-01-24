@@ -16,7 +16,7 @@ export default class Converter {
     }
 
     static isOperation(letter) {
-        let result = letter != '' && '/*+-()'.indexOf(letter) !== -1;
+        let result = '/*+-()'.indexOf(letter) !== -1;
         return result;
     }
 
@@ -24,6 +24,7 @@ export default class Converter {
         let resultStack = [];
         let frontStack = [];
         let awaitStack = [];
+        let sourceValues = [];
 
         const {
             BehaviorDirectly, BehaviorAwait, BehaviorContinue,
@@ -31,55 +32,63 @@ export default class Converter {
         } = this.state.behavior;
 
         let accum = "";
-        let sourceValues = [];
-
         let index = 0;
-        while (index++ < input.length) {
-            if (Converter.isOperation(input[index])) {
-                sourceValues.push({value: accum});
-                accum = input[index];
+        while (index <= input.length) {
+            let char = input.charAt(index);
+            if (Converter.isOperation(char)) {
+                if (accum !== '')
+                    sourceValues.push(accum);
+                accum = char;
             } else {
-                if (Converter.isOperation(accum)) {
-                    sourceValues.push({value: accum});
-                    accum = input[index];
+                if (Converter.isOperation(accum) && accum !== '') {
+                    sourceValues.push(accum);
+                    accum = char;
                 } else {
-                    accum = accum + '' + input[index];
+                    accum = accum + '' + char;
                 }
             }
+            ++index;
         }
 
         if (!sourceValues || sourceValues.length === 0)
             return "[Converter input data error]";
 
-        // Mark the both head and tail
-        sourceValues[0].side = sourceValues[sourceValues.length - 1].side = "side";
+        // Mark the tail with a special symbol
+        sourceValues[sourceValues.length] = "|";
 
         sourceValues.forEach((el, index, arr) => {
             let behavior = BehaviorError;
-            let item = el;
 
-            // Head and any numbers is always getting to the front stack
-            if (index === 0 || !Converter.isOperation(item)) {
+            if (el === "|") {
+                behavior = BehaviorContinue;
+            } else if (!Converter.isOperation(el)) {
                 behavior = BehaviorDirectly;
             } else {
-                behavior = this.getOperationsBehavior(item, awaitStack[awaitStack.length - 1]);
+                if (awaitStack.length === 0)
+                    behavior = BehaviorAwait;
+                else
+                    behavior = this.getOperationsBehavior(awaitStack[awaitStack.length - 1], el);
             }
 
             switch (behavior) {
                 case BehaviorDirectly:
-                    frontStack.push(item);
+                    frontStack.push(el);
                     break;
                 case BehaviorAwait:
-                    awaitStack.push(item);
+                    awaitStack.push(el);
                     break;
                 case BehaviorContinue:
                     frontStack.push(awaitStack.pop());
-                    break;
+
+                    // fallthrough into remove braces, it's ok.
+                    let needToRemoveBraces = this.getOperationsBehavior(awaitStack[awaitStack.length - 1], el);
+                    if (BehaviorBraces !== needToRemoveBraces)
+                        break;
+
                 case BehaviorBraces:
                     awaitStack.pop();
                     break;
                 case BehaviorFinish:
-                    resultStack.concat(frontStack);
                     break;
                 case BehaviorError:
                     resultStack.push("[Algorythm Error]");
@@ -87,7 +96,7 @@ export default class Converter {
             }
         });
 
-        return resultStack.toString();
+        return frontStack.join();
     }
 
     /** Таблица сответствий поведения при переводе в обратную польскую нотацию
@@ -108,6 +117,15 @@ export default class Converter {
             "|*": 2, "+*": 2, "-*": 2, "**": 2, "/*": 2, "(*": 1, ")*": 2,
             "|/": 2, "+/": 2, "-/": 2, "*/": 2, "//": 2, "(/": 1, ")/": 2,
             "|(": 5, "+(": 1, "-(": 1, "*(": 1, "/(": 1, "((": 1, "()": 3,
+        };
+
+        const pattern_inv = {
+            "||": 4, "|+": 1, "|-": 1, "|*": 1, "|/": 1, "|(": 1, "|)": 5,
+            "+|": 2, "++": 2, "+-": 2, "+*": 1, "+/": 1, "+(": 1, "+)": 2,
+            "-|": 2, "-+": 2, "--": 2, "-*": 1, "-/": 1, "-(": 1, "-)": 2,
+            "*|": 2, "*+": 2, "*-": 2, "**": 2, "*/": 2, "*(": 1, "*)": 2,
+            "/|": 2, "/+": 2, "/-": 2, "/*": 2, "//": 2, "/(": 1, "/)": 2,
+            "(|": 5, "(+": 1, "(-": 1, "(*": 1, "(/": 1, "((": 1, "))": 3,
         };
 
         const result = pattern[a + "" + b];
